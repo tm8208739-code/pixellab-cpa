@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pixellab CPA</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0d1117; color: #c9d1d9; padding: 16px; }
+        .container { max-width: 500px; margin: auto; background: #161b22; padding: 20px; border-radius: 16px; border: 1px solid #30363d; }
+        h1 { font-size: 24px; color: #58a6ff; text-align: center; }
+        p { text-align: center; color: #8b949e; margin-bottom: 20px; }
+        input[type="file"] { width: 100%; padding: 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; color: #c9d1d9; margin-bottom: 16px; }
+        button { width: 100%; padding: 14px; background: #238636; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; }
+        button:hover { background: #2ea043; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+        th, td { border: 1px solid #30363d; padding: 8px; text-align: center; }
+        th { background: #0d1117; color: #58a6ff; }
+        .cpa { color: #58a6ff; font-weight: bold; }
+        .error { color: #f85149; text-align: center; margin-top: 12px; }
+        .success { color: #3fb950; text-align: center; margin-top: 12px; }
+        .footer { text-align: center; margin-top: 20px; color: #8b949e; font-size: 12px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>📊 Pixellab CPA</h1>
+    <p>URL-wise Avg. CPA Calculator</p>
+    <input type="file" id="fileInput" accept=".csv">
+    <button onclick="calculateCPA()">📥 Calculate CPA</button>
+    <div id="output"></div>
+    <div class="footer">Pixellab Media © 2026</div>
+</div>
+
+<script>
+function calculateCPA() {
+    const fileInput = document.getElementById('fileInput');
+    const file = fileInput.files[0];
+    if (!file) { alert('Please select a CSV file.'); return; }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const text = e.target.result;
+        const rows = text.split('\n').map(row => row.split(','));
+        const headers = rows[0].map(h => h.trim());
+
+        const urlIdx = headers.findIndex(h => h.includes('Website URL') || h.includes('URL') || h.includes('Link'));
+        const spendIdx = headers.findIndex(h => h.includes('Amount spent') || h.includes('Spend') || h.includes('Cost'));
+        const ordersIdx = headers.findIndex(h => h.includes('Purchases') || h.includes('Results') || h.includes('Orders') || h.includes('Conversions'));
+
+        if (urlIdx === -1 || spendIdx === -1 || ordersIdx === -1) {
+            document.getElementById('output').innerHTML = `<p class="error">❌ প্রয়োজনীয় কলাম খুঁজে পাওয়া যায়নি।<br>নিশ্চিত করুন: 'Website URL', 'Amount spent', 'Purchases'</p>`;
+            return;
+        }
+
+        const results = {};
+        for (let i = 1; i < rows.length; i++) {
+            const cols = rows[i];
+            if (cols.length <= Math.max(urlIdx, spendIdx, ordersIdx)) continue;
+            const url = cols[urlIdx]?.trim() || 'Unknown';
+            const spend = parseFloat(cols[spendIdx]) || 0;
+            const orders = parseInt(cols[ordersIdx]) || 0;
+            
+            if (!results[url]) results[url] = { spend: 0, orders: 0 };
+            results[url].spend += spend;
+            results[url].orders += orders;
+        }
+
+        if (Object.keys(results).length === 0) {
+            document.getElementById('output').innerHTML = `<p class="error">❌ কোনো ডেটা পাওয়া যায়নি।</p>`;
+            return;
+        }
+
+        let html = `<h2 style="margin-top:20px;color:#58a6ff;">📈 Results</h2><table><tr><th>URL</th><th>Spend</th><th>Orders</th><th>CPA</th></tr>`;
+        for (const [url, data] of Object.entries(results)) {
+            const cpa = data.orders > 0 ? (data.spend / data.orders).toFixed(2) : 'N/A';
+            html += `<tr><td>${url}</td><td>$${data.spend.toFixed(2)}</td><td>${data.orders}</td><td class="cpa">${cpa !== 'N/A' ? '$' + cpa : 'N/A'}</td></tr>`;
+        }
+        html += '</table>';
+        html += `<p class="success">✅ Total URLs: ${Object.keys(results).length}</p>`;
+        document.getElementById('output').innerHTML = html;
+    };
+    reader.readAsText(file);
+}
+</script>
+</body>
+</html>
